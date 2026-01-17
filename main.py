@@ -16,32 +16,42 @@ genai.configure(api_key=API_KEY)
 
 # FarmerAI System Prompt
 SYSTEM_PROMPT = """Sunanka FarmerAI. Kai kwararren masanin noma ne (Agronomist). 
-Idan aka turo maka hoton shuka ko bayani, gano cuta, kwari, ko matsalar kasa. 
+Idan aka turo maka hoton shuka ko bayani na rubutu, gano cuta, kwari, ko matsalar kasa. 
 Bayyana matsalar cikin harshen Hausa mai sauƙi irin ta Najeriya, sannan ka ba da shawarar magani, 
 taki, ko hanyar gyara. Kasance mai fara'a da taimako."""
 
 class Query(BaseModel):
     image_data: str = None
-    text: str = None
+    text_query: str = None  
 
 @app.post("/analyze")
 async def analyze_crop(query: Query):
     try:
-        # Model settings
+        # Model: Gemini Flash Latest
         model = genai.GenerativeModel('gemini-flash-latest')
         
+        prompt_parts = [SYSTEM_PROMPT]
+        
+        # 1. Idan akwai hoto
         if query.image_data:
-            image_parts = [
-                {
-                    "mime_type": "image/jpeg",
-                    "data": query.image_data 
-                }
-            ]
-            response = model.generate_content([SYSTEM_PROMPT, image_parts[0]])
-        else:
-            response = model.generate_content(f"{SYSTEM_PROMPT}\nTambaya: {query.text}")
+            prompt_parts.append({
+                "mime_type": "image/jpeg",
+                "data": query.image_data 
+            })
+            
+        # 2. Idan akwai rubutu, saka shi shima
+        if query.text_query:
+            prompt_parts.append(f"\nTambayar manomi: {query.text_query}")
+            
+        # Tabbatar an turo akalla abu daya
+        if len(prompt_parts) == 1:
+            return {"analysis": "Don Allah turo hoto ko ka rubuta tambaya don in taimaka maka."}
+
+        # Kira Gemini
+        response = model.generate_content(prompt_parts)
             
         return {"analysis": response.text}
+        
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
