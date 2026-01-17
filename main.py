@@ -1,20 +1,28 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
 import os
-import base64
 from dotenv import load_dotenv
 
-# 1. Loda .env
+# 1. Loda .env (ma'ajiyarmu na API)
 load_dotenv()
 
 app = FastAPI()
 
-# 2. Saita API
+# 2. Saita CORS don App din ya samu damar kira daga ko'ina
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 3. Saita API
 API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=API_KEY)
 
-# FarmerAI System Prompt
 SYSTEM_PROMPT = """Sunanka FarmerAI. Kai kwararren masanin noma ne (Agronomist). 
 Idan aka turo maka hoton shuka ko bayani na rubutu, gano cuta, kwari, ko matsalar kasa. 
 Bayyana matsalar cikin harshen Hausa mai sauƙi irin ta Najeriya, sannan ka ba da shawarar magani, 
@@ -27,25 +35,25 @@ class Query(BaseModel):
 @app.post("/analyze")
 async def analyze_crop(query: Query):
     try:
-        # Model: Gemini Flash Latest
-        model = genai.GenerativeModel('gemini-flash-latest')
+        model = genai.GenerativeModel('gemini-flash-latest') # Don sabuntawa
         
         prompt_parts = [SYSTEM_PROMPT]
         
-        # 1. Idan akwai hoto
+        # 1. Idan akwai hoto (handling base64)
         if query.image_data:
+            # 
+            pure_base64 = query.image_data.split(",")[-1] if "," in query.image_data else query.image_data
             prompt_parts.append({
                 "mime_type": "image/jpeg",
-                "data": query.image_data 
+                "data": pure_base64
             })
             
-        # 2. Idan akwai rubutu, saka shi shima
+        # 2. Idan akwai rubutu
         if query.text_query:
             prompt_parts.append(f"\nTambayar manomi: {query.text_query}")
             
-        # Tabbatar an turo akalla abu daya
         if len(prompt_parts) == 1:
-            return {"analysis": "Don Allah turo hoto ko ka rubuta tambaya don in taimaka maka."}
+            return {"analysis": "Don Allah turo hoto ko ka rubuta tambaya."}
 
         # Kira Gemini
         response = model.generate_content(prompt_parts)
@@ -53,7 +61,7 @@ async def analyze_crop(query: Query):
         return {"analysis": response.text}
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Kuskure: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
