@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 from pydantic import BaseModel
 import google.generativeai as genai
 import os
@@ -29,8 +30,8 @@ Bayyana matsalar cikin harshen Hausa mai sauƙi irin ta Najeriya, sannan ka ba d
 taki, ko hanyar gyara. Kasance mai fara'a da taimako."""
 
 class Query(BaseModel):
-    image_data: str = None
-    text_query: str = None  
+    image_data: Optional[str] = None
+    text_query: Optional[str] = None  
 
 @app.post("/analyze")
 async def analyze_crop(query: Query):
