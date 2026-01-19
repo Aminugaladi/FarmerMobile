@@ -6,12 +6,12 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 
-# 1. Loda .env (ma'ajiyarmu na API)
+#  Loda .env
 load_dotenv()
 
 app = FastAPI()
 
-# 2. Saita CORS don App din ya samu damar kira daga ko'ina
+# Saita CORS Don magana da Backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,14 +20,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. Saita API
+# 3. Saita Gemini API
 API_KEY = os.getenv("GEMINI_API_KEY")
+if not API_KEY:
+    print("WARNING: GEMINI_API_KEY ba a saita shi ba a cikin .env!")
+
 genai.configure(api_key=API_KEY)
 
 SYSTEM_PROMPT = """Sunanka FarmerAI. Kai kwararren masanin noma ne (Agronomist). 
-Idan aka turo maka hoton shuka ko bayani na rubutu, gano cuta, kwari, ko matsalar kasa. 
-Bayyana matsalar cikin harshen Hausa mai sauƙi irin ta Najeriya, sannan ka ba da shawarar magani, 
-taki, ko hanyar gyara. Kasance mai fara'a da taimako."""
+Aikin ka shi ne taimaka wa manoma gano cututtukan shuka, kwari, ko matsalolin ƙasa daga hotuna ko rubutu.
+
+TSARIN AMSA:
+1. Yi amfani da '#' kafin manyan jigogi (misali: # Gano Cuta).
+2. Yi amfani da '**' don nuna kalmomi masu muhimmanci.
+3. Bayyana matsalar da hanyar magance ta cikin harshen Hausa mai sauƙi na Najeriya.
+4. Kada ka cika yawan alamomi (symbols) da yawa don sifikar waya ta iya karantawa sarai.
+5. Idan hoton bai nuna shuka ba, gaya wa manomin ya sake ɗaukar hoton shuka."""
 
 class Query(BaseModel):
     image_data: Optional[str] = None
@@ -36,36 +44,66 @@ class Query(BaseModel):
 @app.post("/analyze")
 async def analyze_crop(query: Query):
     try:
-        model = genai.GenerativeModel('gemini-flash-latest') # Don sabuntawa
+        # Mun yi amfani da gemini-1.5-flash-latest ko gemini-flash-latest
+        model = genai.GenerativeModel(
+            model_name='gemini-flash-latest',
+            generation_config={
+                "temperature": 0.7,
+                "top_p": 0.95,
+                "max_output_tokens": 1024,
+            }
+        )
         
         prompt_parts = [SYSTEM_PROMPT]
         
-        # 1. Idan akwai hoto (handling base64)
-        if query.image_data:
-            # 
-            pure_base64 = query.image_data.split(",")[-1] if "," in query.image_data else query.image_data
-            prompt_parts.append({
-                "mime_type": "image/jpeg",
-                "data": pure_base64
-            })
+        # Sarrafa Bayanan Hoto (Image Handling)
+        if query.image_data and len(query.image_data.strip()) > 10:
+            try:
+                # Tace Base64: Cire prefix na "data:image/jpeg;base64," idan akwai
+                if "," in query.image_data:
+                    pure_base64 = query.image_data.split(",")[1]
+                else:
+                    pure_base64 = query.image_data
+                
+                prompt_parts.append({
+                    "mime_type": "image/jpeg",
+                    "data": pure_base64
+                })
+            except Exception as img_err:
+                print(f"Hoto Error: {img_err}")
+                # Kada mu dakatar da komai idan hoto ya samu matsala, rubutu na iya aiki
             
-        # 2. Idan akwai rubutu
-        if query.text_query:
+        #  Sarrafa Bayanan Rubutu (Text Handling)
+        if query.text_query and query.text_query.strip():
             prompt_parts.append(f"\nTambayar manomi: {query.text_query}")
             
+        # Idan payload din babu hoto kuma babu rubutu
         if len(prompt_parts) == 1:
-            return {"analysis": "Don Allah turo hoto ko ka rubuta tambaya."}
+            return {"analysis": "# Sako Daga FarmerAI\n\nBarka! Don Allah turo hoto ko ka rubuta tambayar ka don in taimake ka."}
 
-        # Kira Gemini
+        #  Kiran Gemini API
         response = model.generate_content(prompt_parts)
+        
+        if not response.text:
+            return {"analysis": "# Yi Haƙuri\n\nBan iya gano komai ba a wannan karon. Gwada gyara hoton ko ƙara bayani a rubuce."}
             
         return {"analysis": response.text}
         
     except Exception as e:
-        print(f"Kuskure: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Babban Kuskure (Backend): {str(e)}")
+        # Ba da bayani mai dadi maimakon danyen kuskure
+        raise HTTPException(status_code=500, detail="An samu matsala wurin tuntubar AI. Duba Intanet dinka ko API Key.")
+
+@app.get("/")
+def home():
+    return {
+        "status": "online",
+        "message": "FarmerAI Backend is Running Successfully!",
+        "model": "gemini-flash-latest"
+    }
 
 if __name__ == "__main__":
     import uvicorn
+    # Port din zai canza zuwa wanda Server din da aka tura (kamar Render ko Heroku) ta bayar
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
