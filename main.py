@@ -20,22 +20,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 3. Saita Gemini API
+# Saita Gemini API
 API_KEY = os.getenv("GEMINI_API_KEY")
 if not API_KEY:
     print("WARNING: GEMINI_API_KEY ba a saita shi ba a cikin .env!")
 
 genai.configure(api_key=API_KEY)
 
-SYSTEM_PROMPT = """Sunanka FarmerAI. Kai kwararren masanin noma ne (Agronomist). 
-Aikin ka shi ne taimaka wa manoma gano cututtukan shuka, kwari, ko matsalolin ƙasa daga hotuna ko rubutu.
+SYSTEM_PROMPT = """Sunanka FarmerAI. Kai kwararren masanin noma ne. 
+Idan manomi ya tambayi game da cutar shuka ba tare da hoto ba:
+1. Ka lissafa cututtuka 2 ko 3 da aka saba samu ga waccan shukar (misali Masara).
+2. Ka ba da alamomin kowace cuta da kuma hanyar magance ta.
+3. Ka gaya masa ya turo hoto domin ka tabbatar da takamaiman cutar.
 
 TSARIN AMSA:
-1. Yi amfani da '#' kafin manyan jigogi (misali: # Gano Cuta).
-2. Yi amfani da '**' don nuna kalmomi masu muhimmanci.
-3. Bayyana matsalar da hanyar magance ta cikin harshen Hausa mai sauƙi na Najeriya.
-4. Kada ka cika yawan alamomi (symbols) da yawa don sifikar waya ta iya karantawa sarai.
-5. Idan hoton bai nuna shuka ba, gaya wa manomin ya sake ɗaukar hoton shuka."""
+- Yi amfani da harshen Hausa mai sauƙi ta Najeriya.
+- Ka rinka magana cikin ladabi da tausaya wa ga manomi.
+- Idan da dama, rinka hadawa da hoto wurin bayar da amsa (in akwai bukatar hakan).
+- Yi amfani da '#' don manyan jigogi.
+- Kada ka cika yawan alamomi (symbols) da yawa don sifikar waya ta iya karantawa sarai.
+- Idan hoton bai nuna shuka ba, gaya wa manomin ya sake ɗaukar hoton shuka. 
+- Kasance mai ba da mafita kai tsaye (Proactive), kada ka rinka yawan tambaya kawai."""
 
 class Query(BaseModel):
     image_data: Optional[str] = None
@@ -104,6 +109,6 @@ def home():
 
 if __name__ == "__main__":
     import uvicorn
-    # Port din zai canza zuwa wanda Server din da aka tura (kamar Render ko Heroku) ta bayar
+    # Port din zai canza zuwa wanda Server din da aka tura (Render) ta bayar
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
