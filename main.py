@@ -27,11 +27,11 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# SYSTEM PROMPT: An kara karfin umarnin don samar da cikakkiyar amsa
+# SYSTEM PROMPT:
 SYSTEM_PROMPT = """Sunanka FarmerAI. Kai kwararren masanin noma ne (Agronomist). 
 Aikin ka shi ne taimaka wa manoma gano cututtukan shuka, kwari, ko matsalolin ƙasa.
 
-MUHIMMI: Idan manomi ya tambayi game da cutar shuka (ko da babu hoto):
+MUHIMMI: Idan manomi yayi tambaya game da cutar shuka (ko da babu hoto):
 1. Kada ka tsaya a gaisuwa kawai. Ka lissafa cututtuka 2 ko 3 da aka saba samu ga waccan shukar.
 2. Ka ba da alamomin kowace cuta daki-daki.
 3. Ka ba da hanyar magance su (fadi sunayen sinadarai ko maganin da za'a fesa).
@@ -51,7 +51,7 @@ class Query(BaseModel):
 @app.post("/analyze")
 async def analyze_crop(query: Query):
     try:
-        # 1. Saita Safety Settings don AI ya yarda ya fadi magungunan fesa (Pesticides)
+        #  Saita Safety Settings don AI ya yarda ya fadi magungunan feshi (Pesticides)
         safety_settings = [
             {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -59,9 +59,8 @@ async def analyze_crop(query: Query):
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
         ]
 
-        # 2. Saita Generation Config (An kara max_tokens zuwa 2048)
         model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash-latest',
+            model_name='gemini-flash-latest',
             generation_config={
                 "temperature": 0.8,
                 "top_p": 0.95,
